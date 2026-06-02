@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.autopartsretrieval.autoparts.mapper.PartsMapper">
+
+    <select id="getPartsByImageIds" resultType="com.autopartsretrieval.autoparts.SearchResultDTO">
+        SELECT
+        pi.imageID, pi.imageSrc, p.partsName, p.partsCode, p.retailPr, e.enterpriseName, p.adaptedVehicle
+        FROM parts_image pi
+        JOIN parts p ON pi.partsID = p.partsID
+        JOIN enterprise e ON p.enterpriseID = e.enterpriseID
+        WHERE pi.imageID IN
+        <foreach item="id" collection="imageIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="getPartsByText" resultType="com.autopartsretrieval.autoparts.SearchResultDTO">
+        SELECT
+            pi.imageID, pi.imageSrc, p.partsName, p.partsCode, p.retailPr, e.enterpriseName, p.adaptedVehicle
+        FROM parts p
+                 JOIN parts_image pi ON p.partsID = pi.partsID
+                 LEFT JOIN enterprise e ON p.enterpriseID = e.enterpriseID
+        WHERE p.partsName LIKE CONCAT('%', #{text}, '%')
+           OR p.partsCode LIKE CONCAT('%', #{text}, '%')
+    </select>
+
+<!--    <select id="getAllManageParts" resultType="com.autopartsretrieval.autoparts.SearchResultDTO">-->
+<!--        SELECT-->
+<!--            p.partsID, p.partsName, p.partsCode, p.retailPr, p.adaptedVehicle,-->
+<!--            e.enterpriseName,-->
+<!--            (SELECT imageSrc FROM parts_image WHERE partsID = p.partsID LIMIT 1) as imageSrc-->
+<!--        FROM parts p-->
+<!--            LEFT JOIN enterprise e ON p.enterpriseID = e.enterpriseID-->
+<!--        ORDER BY p.partsID-->
+<!--    </select>-->
+
+    <select id="getAllManageParts" resultType="com.autopartsretrieval.autoparts.SearchResultDTO">
+        SELECT
+            p.partsID, p.partsName, p.partsCode, p.partsType, p.retailPr, p.adaptedVehicle,
+            p.enterpriseID, e.enterpriseName,
+            (SELECT imageSrc FROM parts_image WHERE partsID = p.partsID LIMIT 1) as imageSrc
+        FROM parts p
+            LEFT JOIN enterprise e ON p.enterpriseID = e.enterpriseID
+        ORDER BY LENGTH(p.partsID) DESC, p.partsID DESC
+    </select>
+
+    <update id="updatePart">
+        UPDATE parts
+        SET partsName = #{partsName},
+            partsCode = #{partsCode},
+            partsType = #{partsType},
+            retailPr = #{retailPr},
+            adaptedVehicle = #{adaptedVehicle},
+            enterpriseID = #{enterpriseID}
+        WHERE partsID = #{partsID}
+    </update>
+
+    <delete id="deletePart">
+        DELETE FROM parts WHERE partsID = #{partsID}
+    </delete>
+
+    <select id="countPartsByEnterprise" resultType="java.util.Map">
+        SELECT e.enterpriseName as name, COUNT(p.partsID) as value
+        FROM parts p
+            JOIN enterprise e ON p.enterpriseID = e.enterpriseID
+        GROUP BY e.enterpriseName
+    </select>
+
+    <select id="countPartsByType" resultType="java.util.Map">
+        SELECT partsType as name, COUNT(partsID) as value
+        FROM parts
+        GROUP BY partsType
+    </select>
+
+    <insert id="insertPart">
+        INSERT INTO parts (partsID, partsCode, partsName, partsType, retailPr, adaptedVehicle, enterpriseID)
+        VALUES (#{partsID}, #{partsCode}, #{partsName}, #{partsType}, #{retailPr}, #{adaptedVehicle}, #{enterpriseID})
+    </insert>
+
+    <insert id="insertPartsImage">
+        INSERT INTO parts_image (imageID, imageName, storageFormat, imageSrc, partsID)
+        VALUES (#{imageID}, #{imageName}, #{storageFormat}, #{imageSrc}, #{partsID})
+    </insert>
+
+    <select id="getSearchRanking" resultType="java.util.Map">
+        SELECT p.partsName as name, COUNT(sr.recordID) as value
+        FROM search_record sr
+            JOIN parts_image pi ON sr.imageID = pi.imageID
+            JOIN parts p ON pi.partsID = p.partsID
+        GROUP BY p.partsName
+        ORDER BY value DESC
+            LIMIT 5
+    </select>
+
+    <insert id="insertSearchRecord">
+        INSERT INTO search_record (imageID, userID, searchtime, searchImage)
+        VALUES (#{imageID}, #{userID}, NOW(), #{searchImage})
+    </insert>
+
+    <select id="getImagesByPartsID" resultType="java.lang.String">
+        SELECT imageSrc FROM parts_image WHERE partsID = #{partsID}
+    </select>
+
+    <delete id="deleteImagesByPartsID">
+        DELETE FROM parts_image WHERE partsID = #{partsID}
+    </delete>
+
+</mapper>
