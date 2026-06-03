@@ -4,7 +4,7 @@
       <div class="input-area">
         <el-input 
           v-model="searchText" 
-          placeholder="请输入配件描述 (如: 配件编码、适用车型等)" 
+          placeholder="请输入要检索的配件描述 (如: 配件编码、适用车型等)" 
           class="search-input"
           clearable>
         </el-input>
